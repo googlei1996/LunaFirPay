@@ -1,6 +1,6 @@
 /**
  * 回调代理服务器
- * 监听端口：6666
+ * 监听端口：6666 
  * 请求格式：POST https://proxy.domain.com/https://merchant.com/notify
  */
 
