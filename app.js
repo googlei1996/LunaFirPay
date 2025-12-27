@@ -75,7 +75,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // 静态文件服务（支付图标等）
-app.use('/assets', express.static(path.join(__dirname, 'dist/public/assets')));
+app.use('/assets', express.static(path.join(__dirname, 'dist/assets')));
 
 // API路由
 app.use('/api/auth', authRoutes);

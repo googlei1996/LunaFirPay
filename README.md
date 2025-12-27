@@ -108,7 +108,7 @@ server {
 
     # 静态资源（支付图标等）- Nginx 直接服务
     location /assets/ {
-        alias /path/to/server/dist/public/assets/;
+        alias /path/to/server/dist/assets/;
     }
 
     # 前端路由 - SPA 支持
