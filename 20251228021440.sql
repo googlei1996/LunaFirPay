@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS `verification_codes` (
 CREATE TABLE IF NOT EXISTS `merchants` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` int NOT NULL,
+  `name` varchar(100) DEFAULT NULL COMMENT '商户名（管理员识别用）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '商户备注',
   `pid` varchar(12) DEFAULT NULL,
   `notify_url` varchar(500) DEFAULT NULL COMMENT '默认异步通知地址',
   `return_url` varchar(500) DEFAULT NULL COMMENT '默认同步回调地址',
@@ -387,6 +389,28 @@ SET @sql = (SELECT IF(
   (SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS 
    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'telegram_bind_tokens' AND COLUMN_NAME = 'user_type') LIKE '%provider%',
   "ALTER TABLE telegram_bind_tokens MODIFY user_type ENUM('merchant','admin','ram') NOT NULL",
+  'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 为 merchants 表添加 name 字段（如果不存在）
+SET @sql = (SELECT IF(
+  NOT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'merchants' AND COLUMN_NAME = 'name'),
+  "ALTER TABLE merchants ADD COLUMN `name` VARCHAR(100) DEFAULT NULL COMMENT '商户名' AFTER `user_id`",
+  'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 为 merchants 表添加 remark 字段（如果不存在）
+SET @sql = (SELECT IF(
+  NOT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'merchants' AND COLUMN_NAME = 'remark'),
+  "ALTER TABLE merchants ADD COLUMN `remark` VARCHAR(500) DEFAULT NULL COMMENT '商户备注' AFTER `name`",
   'SELECT 1'
 ));
 PREPARE stmt FROM @sql;

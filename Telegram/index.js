@@ -249,7 +249,7 @@ async function handleBind(chatId, token, fromUser) {
     // 创建新绑定
     await db.query(
       `INSERT INTO telegram_bindings 
-       (user_id, user_type, telegram_id, telegram_username, chat_id, enabled, 
+       (user_id, user_type, telegram_id, username, chat_id, enabled, 
         notify_payment, notify_balance, notify_settlement)
        VALUES (?, ?, ?, ?, ?, 1, 1, 1, 1)`,
       [user_id, user_type, telegramId, username, chatId]
@@ -260,7 +260,7 @@ async function handleBind(chatId, token, fromUser) {
     
     const typeNames = {
       merchant: '商户',
-      provider: '服务商',
+      admin: '管理员',
       ram: 'RAM子账户'
     };
     
@@ -703,7 +703,7 @@ async function showPidSettings(chatId, bindingId, telegramId, messageId = null) 
     const [pids] = await db.query(
       `SELECT m.pid, m.status 
        FROM merchants m 
-       WHERE m.user_id = ? AND m.status = 'approved'
+       WHERE m.user_id = ? AND m.status = 'active'
        ORDER BY m.pid`,
       [binding.user_id]
     );
@@ -849,11 +849,11 @@ PID：${pid}
 async function notifyMerchantRAM(merchantId, notifyType, message, pid = null) {
   try {
     const [rams] = await db.query(`
-      SELECT ur.id as ram_id, ur.permissions, tb.id as binding_id, tb.chat_id, 
+      SELECT ur.id as ram_id, ur.user_id, ur.permissions, tb.id as binding_id, tb.chat_id, 
              tb.notify_payment, tb.notify_balance, tb.notify_settlement, tb.enabled
       FROM user_ram ur
-      INNER JOIN telegram_bindings tb ON CAST(ur.id AS CHAR) = tb.user_id AND tb.user_type = 'ram'
-      WHERE ur.uid = ? AND ur.status = 1 AND tb.enabled = 1
+      INNER JOIN telegram_bindings tb ON ur.user_id = tb.user_id AND tb.user_type = 'ram'
+      WHERE ur.owner_id = ? AND ur.owner_type = 'merchant' AND ur.status = 1 AND tb.enabled = 1
     `, [merchantId]);
     
     for (const ram of rams) {
