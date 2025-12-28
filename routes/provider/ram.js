@@ -45,7 +45,8 @@ function sanitizeInput(str, maxLen = 50) {
 // 验证供应商权限数据
 function validateProviderPermissions(perms) {
   if (!Array.isArray(perms)) return false;
-  const allowedPerms = ['admin', 'order', 'merchant', 'channel', 'settings'];
+  // 管理员可用权限：admin(全部), order(订单), merchant(商户), channel(通道), finance(财务/提现), settings(设置)
+  const allowedPerms = ['admin', 'order', 'merchant', 'channel', 'finance', 'settings'];
   return perms.every(p => typeof p === 'string' && allowedPerms.includes(p));
 }
 
@@ -89,7 +90,7 @@ router.post('/ram/add', requireProviderMainAccount, async (req, res) => {
     }
 
     // 验证权限类型 - admin与所有其他权限互斥
-    const otherPermissions = ['order', 'merchant', 'channel', 'settings'];
+    const otherPermissions = ['order', 'merchant', 'channel', 'finance', 'settings'];
     const hasAdmin = permissions.includes('admin');
     const hasOther = permissions.some(p => otherPermissions.includes(p));
     
@@ -155,7 +156,7 @@ router.post('/ram/update', requireProviderMainAccount, async (req, res) => {
 
     // 验证权限类型 - admin与所有其他权限互斥
     if (permissions) {
-      const otherPermissions = ['order', 'merchant', 'channel', 'settings'];
+      const otherPermissions = ['order', 'merchant', 'channel', 'finance', 'settings'];
       const hasAdmin = permissions.includes('admin');
       const hasOther = permissions.some(p => otherPermissions.includes(p));
       

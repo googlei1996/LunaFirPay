@@ -218,7 +218,7 @@ router.get('/telegram/status', async (req, res) => {
 });
 
 // 生成 Telegram 绑定码
-router.post('/telegram/bindToken', async (req, res) => {
+router.post('/telegram/bindToken', requireProviderRamPermission('settings'), async (req, res) => {
   try {
     const userId = req.ramUser ? req.ramUser.user_id : req.user.user_id;
     const userType = req.ramUser ? 'ram' : 'admin';
@@ -261,7 +261,7 @@ router.post('/telegram/bindToken', async (req, res) => {
 });
 
 // 解除 Telegram 绑定
-router.post('/telegram/unbind', async (req, res) => {
+router.post('/telegram/unbind', requireProviderRamPermission('settings'), async (req, res) => {
   try {
     const userId = req.ramUser ? req.ramUser.user_id : req.user.user_id;
     const userType = req.ramUser ? 'ram' : 'admin';
