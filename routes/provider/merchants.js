@@ -54,7 +54,7 @@ router.get('/merchants', requireProviderRamPermission('merchant'), async (req, r
     // 单服务商模式：merchants 表直接存储商户信息，排除管理员用户
     let sql = `SELECT m.id, m.pid, m.user_id, m.fee_rate, m.fee_rates, m.fee_payer, m.status, m.pay_group_id,
                m.created_at, m.approved_at as joined_at,
-               u.username as name, m.balance,
+               COALESCE(m.name, u.username) as name, m.remark, m.balance,
                u.username
                FROM merchants m
                JOIN users u ON m.user_id = u.id
@@ -73,8 +73,8 @@ router.get('/merchants', requireProviderRamPermission('merchant'), async (req, r
     }
 
     if (name) {
-      sql += ' AND u.username LIKE ?';
-      params.push(`%${name}%`);
+      sql += ' AND (m.name LIKE ? OR u.username LIKE ?)';
+      params.push(`%${name}%`, `%${name}%`);
     }
 
     // 统计总数
@@ -422,7 +422,7 @@ router.post('/merchants/reject', requireProviderRamPermission('merchant'), async
 router.post('/merchants/update', requireProviderRamPermission('merchant'), async (req, res) => {
   try {
     const ramUser = req.ramUser;
-    const { merchant_id, name, fee_rate, fee_rates, fee_payer, status, pay_group_id } = req.body;
+    const { merchant_id, name, remark, fee_rate, fee_rates, fee_payer, status, pay_group_id } = req.body;
 
     // 检查是否有 channel 权限（用于修改费率和支付组）
     const hasChannelPermission = !ramUser || 
@@ -430,6 +430,16 @@ router.post('/merchants/update', requireProviderRamPermission('merchant'), async
 
     const updates = [];
     const params = [];
+
+    // 商户名和备注可以直接修改
+    if (name !== undefined) {
+      updates.push('name = ?');
+      params.push(name || null);
+    }
+    if (remark !== undefined) {
+      updates.push('remark = ?');
+      params.push(remark || null);
+    }
 
     // 费率和支付组需要 channel 权限
     if (fee_rate !== undefined && hasChannelPermission) {

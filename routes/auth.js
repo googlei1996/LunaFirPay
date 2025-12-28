@@ -316,8 +316,8 @@ router.post('/login', async (req, res) => {
       } else {
         finalSessionId = sessionId;
         await db.query(
-          'INSERT INTO sessions (user_id, session_token) VALUES (?, ?)',
-          [ramUser.user_id, finalSessionId]
+          'INSERT INTO sessions (user_id, user_type, session_token) VALUES (?, ?, ?)',
+          [ramUser.user_id, 'ram', finalSessionId]
         );
       }
 
@@ -368,12 +368,8 @@ router.post('/login', async (req, res) => {
     // 根据 is_admin 确定用户类型
     const actualUserType = user.is_admin === 1 ? 'admin' : 'merchant';
 
-    // 如果前端指定为 userType，验证是否匹为 
-    if (userType && userType !== 'ram') {
-      if (actualUserType !== userType) {
-        return res.json({ code: -1, msg: actualUserType === 'admin' ? '请使用管理员登录入口' : '请使用商户登录入口' });
-      }
-    }
+    // 自动识别用户类型，无需验证前端传来的 userType
+    // 管理员和商户都可以从同一个入口登录
 
     // 查找现有会话，如果没有则创建新的
     const sessionUserType = actualUserType;
