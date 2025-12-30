@@ -192,14 +192,35 @@ async function sendRequest(method, apiUrl, body, channelConfig) {
  * 发起支付
  */
 async function submit(channelConfig, orderInfo, conf) {
-    const { trade_no, is_wechat } = orderInfo;
+    const { trade_no, is_wechat, is_mobile } = orderInfo;
     const apptype = channelConfig.apptype || [];
     
-    // 微信内优先使用JSAPI
-    if (is_wechat && apptype.includes('3')) {
-        return { type: 'jump', url: `/pay/jspay/${trade_no}/` };
+    // 微信内打开
+    if (is_wechat) {
+        // JSAPI支付
+        if (apptype.includes('3')) {
+            return { type: 'jump', url: `/pay/jspay/${trade_no}/` };
+        }
+        // Native扫码
+        if (apptype.includes('1')) {
+            return { type: 'jump', url: `/pay/qrcode/${trade_no}/` };
+        }
+        return { type: 'jump', url: `/pay/submit/${trade_no}/` };
     }
     
+    // 手机端（非微信）
+    if (is_mobile) {
+        // H5支付
+        if (apptype.includes('2')) {
+            return { type: 'jump', url: `/pay/h5/${trade_no}/` };
+        }
+        // JSAPI/小程序跳转
+        if (apptype.includes('3')) {
+            return { type: 'jump', url: `/pay/wap/${trade_no}/` };
+        }
+    }
+    
+    // 默认扫码支付
     return { type: 'jump', url: `/pay/qrcode/${trade_no}/` };
 }
 

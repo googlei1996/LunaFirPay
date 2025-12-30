@@ -272,11 +272,48 @@ async function appPay(channelConfig, orderInfo) {
 }
 
 /**
- * 发起支付（根据类型选择）
+ * 发起支付（根据设备类型和apptype选择）
  */
 async function submit(channelConfig, orderInfo) {
-  // 默认使用Native支付
-  return await nativePay(channelConfig, orderInfo);
+  const apptype = channelConfig.apptype || [];
+  const isMobile = orderInfo.is_mobile || false;
+  const isWechat = orderInfo.is_wechat || false;
+  const { trade_no } = orderInfo;
+  
+  // 微信内打开
+  if (isWechat) {
+    // JSAPI支付（需要绑定公众号）
+    if (apptype.includes('2')) {
+      return { type: 'jump', url: `/pay/jspay/${trade_no}/?d=1` };
+    }
+    // Native支付（企业微信等场景）
+    if (apptype.includes('1')) {
+      return { type: 'jump', url: `/pay/qrcode/${trade_no}/` };
+    }
+    // 其他情况跳转收银台
+    return { type: 'jump', url: `/pay/submit/${trade_no}/` };
+  }
+  
+  // 手机端（非微信）
+  if (isMobile) {
+    // H5支付优先
+    if (apptype.includes('3')) {
+      return { type: 'jump', url: `/pay/h5/${trade_no}/` };
+    }
+    // APP支付（iOS）
+    if (apptype.includes('5')) {
+      return { type: 'jump', url: `/pay/apppay/${trade_no}/` };
+    }
+    // JSAPI/小程序支付需要跳转
+    if (apptype.includes('2')) {
+      return { type: 'jump', url: `/pay/wap/${trade_no}/` };
+    }
+    // 默认显示二维码
+    return { type: 'jump', url: `/pay/qrcode/${trade_no}/` };
+  }
+  
+  // 电脑端 - 默认扫码支付
+  return { type: 'jump', url: `/pay/qrcode/${trade_no}/` };
 }
 
 /**

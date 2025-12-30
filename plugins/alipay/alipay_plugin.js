@@ -266,43 +266,79 @@ async function sendRequest(params) {
 }
 
 /**
- * 发起支付
+ * 发起支付（根据设备类型和apptype选择）
  */
 async function submit(channelConfig, orderInfo) {
-  const { trade_no, out_trade_no, money, name, notify_url, return_url } = orderInfo;
+  const { trade_no, money, name, notify_url, return_url } = orderInfo;
+  const apptype = channelConfig.apptype || [];
+  const isMobile = orderInfo.is_mobile || false;
+  const isAlipay = orderInfo.is_alipay || false;
+  const isWechat = orderInfo.is_wechat || false;
   
-  const config = {
-    ...channelConfig,
-    notify_url,
-    return_url
-  };
-  
-  const bizContent = {
-    out_trade_no: trade_no,
-    total_amount: money.toFixed(2),
-    subject: name,
-    product_code: 'FAST_INSTANT_TRADE_PAY'
-  };
-  
-  if (channelConfig.appmchid) {
-    bizContent.seller_id = channelConfig.appmchid;
+  // 支付宝内打开 - JS支付
+  if (isAlipay && apptype.includes('4') && !apptype.includes('2')) {
+    return { type: 'jump', url: `/pay/jspay/${trade_no}/?d=1` };
   }
   
-  // 构建支付宝支付表单
-  const params = buildRequestParams(config, 'alipay.trade.page.pay', bizContent, channelConfig);
-  
-  // 生成表单HTML
-  let formHtml = `<form id="alipayForm" action="${GATEWAY_URL}" method="post">`;
-  for (const [key, value] of Object.entries(params)) {
-    formHtml += `<input type="hidden" name="${key}" value="${String(value).replace(/"/g, '&quot;')}">`;
+  // 手机端但没有手机网站支付，或电脑端没有电脑网站支付 - 显示二维码
+  if ((isMobile && (apptype.includes('3') || apptype.includes('4') || apptype.includes('8')) && !apptype.includes('2')) 
+      || (!isMobile && !apptype.includes('1'))) {
+    return { type: 'jump', url: `/pay/qrcode/${trade_no}/` };
   }
-  formHtml += '</form><script>document.getElementById("alipayForm").submit();</script>';
   
-  return {
-    type: 'html',
-    data: formHtml,
-    pay_url: null
-  };
+  // 微信内打开 - 显示二维码（带wap参数）
+  if (isWechat) {
+    return { type: 'jump', url: `/pay/qrcode/${trade_no}/?wap=1` };
+  }
+  
+  // 手机端 + 手机网站支付
+  if (isMobile && apptype.includes('2')) {
+    return await wapPay(channelConfig, orderInfo);
+  }
+  
+  // 电脑端 + 电脑网站支付
+  if (apptype.includes('1')) {
+    const config = {
+      ...channelConfig,
+      notify_url,
+      return_url
+    };
+    
+    const bizContent = {
+      out_trade_no: trade_no,
+      total_amount: money.toFixed(2),
+      subject: name,
+      product_code: 'FAST_INSTANT_TRADE_PAY'
+    };
+    
+    if (channelConfig.appmchid) {
+      bizContent.seller_id = channelConfig.appmchid;
+    }
+    
+    // 添加客户端IP
+    if (orderInfo.clientip) {
+      bizContent.business_params = { mc_create_trade_ip: orderInfo.clientip };
+    }
+    
+    // 构建支付宝支付表单
+    const params = buildRequestParams(config, 'alipay.trade.page.pay', bizContent, channelConfig);
+    
+    // 生成表单HTML
+    let formHtml = `<form id="alipayForm" action="${GATEWAY_URL}" method="post">`;
+    for (const [key, value] of Object.entries(params)) {
+      formHtml += `<input type="hidden" name="${key}" value="${String(value).replace(/"/g, '&quot;')}">`;
+    }
+    formHtml += '</form><script>document.getElementById("alipayForm").submit();</script>';
+    
+    return {
+      type: 'html',
+      data: formHtml,
+      pay_url: null
+    };
+  }
+  
+  // 默认显示二维码
+  return { type: 'jump', url: `/pay/qrcode/${trade_no}/` };
 }
 
 /**

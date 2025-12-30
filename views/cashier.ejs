@@ -1047,7 +1047,12 @@
             var data = await res.json();
             
             if (data.code === 0) {
-              if (data.type === 'crypto' && data.crypto) {
+              if (data.html) {
+                // HTML表单自动提交（如支付宝网页支付）
+                document.open();
+                document.write(data.html);
+                document.close();
+              } else if (data.type === 'crypto' && data.crypto) {
                 // 加密货币支付 - 在当前页面显示二维码
                 showCryptoQrcode(data.crypto);
               } else if (data.pay_url) {

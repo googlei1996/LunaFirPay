@@ -1637,6 +1637,13 @@ router.post('/dopay', async (req, res) => {
       });
     }
 
+    // 设备检测
+    const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+    const is_mobile = /mobile|android|iphone|ipad|ipod/i.test(userAgent);
+    const is_wechat = userAgent.includes('micromessenger');
+    const is_alipay = userAgent.includes('alipay');
+    const is_qq = userAgent.includes('qq/');
+    
     // 构建订单信息给插件
     const orderInfo = {
       trade_no: order.trade_no,
@@ -1648,7 +1655,15 @@ router.post('/dopay', async (req, res) => {
       notify_url: `${baseUrl}/api/pay/notify/${order.trade_no}`,
       return_url: `${baseUrl}/api/pay/return/${order.trade_no}`,
       client_ip: order.client_ip || '127.0.0.1',
-      userAgent: req.headers['user-agent'] || ''
+      clientip: order.client_ip || '127.0.0.1',
+      userAgent: req.headers['user-agent'] || '',
+      // 设备检测信息
+      is_mobile,
+      is_wechat,
+      is_alipay,
+      is_qq,
+      device: is_mobile ? 'mobile' : 'pc',
+      mdevice: is_wechat ? 'wechat' : (is_alipay ? 'alipay' : (is_qq ? 'qq' : ''))
     };
     
     // 解析买家身份限制信息并添加到 orderInfo
