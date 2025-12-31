@@ -99,14 +99,20 @@ router.get('/overview', async (req, res) => {
           const pt = allPayTypes.find(p => p.id === parseInt(payTypeId));
           if (pt && typeConfig.rate !== undefined && typeConfig.rate !== null) {
             // 费率优先级：商户通道独立费率 > 商户统一费率 > 支付组费率
-            // 统一格式：数据库存储百分比值（如6表示6%），返回时转换为小数（0.06）
+            // 智能兼容新旧格式：
+            // - 旧格式（小数）：0.006 表示 0.6%，直接使用
+            // - 新格式（百分比）：6 表示 6%，需要 /100
             let finalRate;
+            const normalizeRate = (r) => {
+              const v = parseFloat(r);
+              return isNaN(v) ? 0 : (v >= 1 ? v / 100 : v);
+            };
             if (merchantFeeRates && merchantFeeRates[pt.name] !== undefined) {
-              finalRate = merchantFeeRates[pt.name] / 100; // 百分比转小数
+              finalRate = normalizeRate(merchantFeeRates[pt.name]);
             } else if (merchant.fee_rate !== null && merchant.fee_rate !== undefined) {
-              finalRate = merchant.fee_rate / 100; // 百分比转小数
+              finalRate = normalizeRate(merchant.fee_rate);
             } else {
-              finalRate = typeConfig.rate / 100; // 百分比转小数
+              finalRate = typeConfig.rate / 100; // 支付组始终是百分比格式
             }
             rates.push({
               pay_type: pt.name,

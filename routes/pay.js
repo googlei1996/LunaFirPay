@@ -255,6 +255,22 @@ async function getChannels() {
  * @param {string} payType - 支付类型名称（如 'alipay', 'wxpay'）
  * @returns {Promise<number>} 费率（小数形式，如 0.06 表示 6%）
  */
+
+/**
+ * 智能转换费率为小数形式
+ * 兼容新旧格式：
+ * - 旧格式（小数）：0.006 表示 0.6%，直接使用
+ * - 新格式（百分比）：6 表示 6%，需要 /100
+ * 判断依据：如果值 >= 1，认为是百分比格式
+ */
+function normalizeRateToDecimal(rate) {
+  const value = parseFloat(rate);
+  if (isNaN(value)) return 0;
+  // 如果值 >= 1，说明是百分比格式（如 6 表示 6%），需要 /100
+  // 如果值 < 1，说明是小数格式（如 0.06 表示 6%），直接使用
+  return value >= 1 ? value / 100 : value;
+}
+
 async function getMerchantFeeRate(merchant, payType) {
   // 1. 如果商户有该通道的独立费率，优先使用
   if (merchant.merchant_fee_rates) {
@@ -263,15 +279,15 @@ async function getMerchantFeeRate(merchant, payType) {
       try { feeRates = JSON.parse(feeRates); } catch (e) { feeRates = null; }
     }
     if (feeRates && feeRates[payType] !== undefined && feeRates[payType] !== null) {
-      // 费率以百分比存储，需要 /100 转为小数
-      return parseFloat(feeRates[payType]) / 100;
+      // 智能兼容新旧格式
+      return normalizeRateToDecimal(feeRates[payType]);
     }
   }
 
   // 2. 如果商户有统一费率，使用统一费率
   if (merchant.merchant_fee_rate !== null && merchant.merchant_fee_rate !== undefined) {
-    // 费率以百分比存储，需要 /100 转为小数
-    return parseFloat(merchant.merchant_fee_rate) / 100;
+    // 智能兼容新旧格式
+    return normalizeRateToDecimal(merchant.merchant_fee_rate);
   }
   
   // 3. 从支付组获取费率（单服务商模式，不按 provider_id 过滤）

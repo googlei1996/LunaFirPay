@@ -1,7 +1,6 @@
 /*
 LunaFirPay 数据库初始化/迁移脚本
 支持全新安装和增量更新
-最后更新: 2025-12-28
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -89,7 +88,7 @@ CREATE TABLE IF NOT EXISTS `merchants` (
   `rsa_public_key` text,
   `rsa_private_key` text,
   `platform_public_key` text,
-  `fee_rate` decimal(10,4) DEFAULT '0.0060',
+  `fee_rate` decimal(10,4) DEFAULT NULL COMMENT '商户统一费率（已废弃，请使用fee_rates）',
   `fee_rates` json DEFAULT NULL,
   `fee_payer` enum('merchant','buyer') DEFAULT 'merchant',
   `pay_group_id` int unsigned DEFAULT NULL,
@@ -456,3 +455,14 @@ DEALLOCATE PREPARE stmt;
 
 -- 修改 merchants.status 枚举添加 paused（直接执行，MySQL 会自动保留现有值）
 ALTER TABLE `merchants` MODIFY COLUMN `status` enum('pending','active','paused','disabled','banned') NOT NULL DEFAULT 'pending';
+
+-- 修复 merchants.fee_rate 默认值（如果默认值不是 NULL 则修改，不影响已有数据）
+SET @sql = (SELECT IF(
+  (SELECT COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'merchants' AND COLUMN_NAME = 'fee_rate') IS NOT NULL,
+  "ALTER TABLE merchants ALTER COLUMN fee_rate SET DEFAULT NULL",
+  'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
